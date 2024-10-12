@@ -225,7 +225,7 @@ jobs:
           path: connection_info.txt      
   
   Deploy_EFK:
-    needs: [Deploy_CloudFormation, Conexion_EC2, Deploy_Nginx]
+    needs: [Deploy_CloudFormation, Conexion_EC2]
     runs-on: ubuntu-latest
     outputs:
       kibana_url: ${{ steps.kibana-url.outputs.kibana_url }}
@@ -340,7 +340,7 @@ jobs:
               echo "grafana_url=http://$GRAFANA_URL" >> $GITHUB_OUTPUT
 
   Create_Connection_Info:
-    needs: [Deploy_CloudFormation, Deploy_Nginx, Deploy_EFK, Conexion_EC2]
+    needs: [Deploy_CloudFormation, Deploy_Nginx, Deploy_EFK, Conexion_EC2, Deploy_Monitoring]
     runs-on: ubuntu-latest
     steps:
       - name: Create connection info
