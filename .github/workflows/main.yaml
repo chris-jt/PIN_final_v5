@@ -9,8 +9,7 @@ env:
   NODE_TYPE: t3.medium
   NODE_COUNT: 3
   AMI_ID: ami-0261755bbcb8c4a84  # AMI ID for Ubuntu 20.04 LTS in us-east-1
-  GRAFANA_ADMIN_PASSWORD: adminPIN 
-
+  GRAFANA_ADMIN_PASSWORD: adminPIN
 jobs:
   Credenciales:
     runs-on: ubuntu-latest
@@ -288,7 +287,7 @@ jobs:
               # Install Prometheus and Grafana
               helm install monitoring prometheus-community/kube-prometheus-stack \
                 --namespace prometheus \
-                --set grafana.adminPassword=${{ env.GRAFANA_ADMIN_PASSWORD }} \
+                --set grafana.adminPassword=adminPIN \
                 --set prometheus.service.type=LoadBalancer \
                 --set grafana.service.type=LoadBalancer \
                 --set alertmanager.persistentVolume.storageClass="gp2" \
@@ -316,7 +315,7 @@ jobs:
               PROMETHEUS_SVC=$(kubectl get svc -n prometheus -l "app=kube-prometheus-stack-prometheus" -o jsonpath="{.items[0].metadata.name}")
 
               # Esperar un poco más para asegurarse de que Grafana esté completamente inicializado
-              sleep 30
+              sleep 60
 
               kubectl exec -n prometheus $GRAFANA_POD -- curl -X POST -H "Content-Type: application/json" -d "{\"name\":\"Prometheus\",\"type\":\"prometheus\",\"url\":\"http://$PROMETHEUS_SVC:9090\",\"access\":\"proxy\",\"isDefault\":true}" http://admin:${{ secrets.GRAFANA_ADMIN_PASSWORD }}@localhost:3000/api/datasources
               '
@@ -343,7 +342,8 @@ jobs:
               echo "Failed to get Grafana URL"
               exit 1
             fi
-            echo "grafana_url=http://$GRAFANA_URL" >> $GITHUB_OUTPUT
+            echo "grafana_url=http://${GRAFANA_URL}" >> $GITHUB_OUTPUT
+            echo "Grafana URL: http://${GRAFANA_URL}"
 
   Create_Connection_Info:
     needs: [Deploy_CloudFormation, Deploy_Nginx, Deploy_EFK, Conexion_EC2, Deploy_Monitoring]
