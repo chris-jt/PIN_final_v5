@@ -348,20 +348,40 @@ jobs:
     - name: Get Prometheus URL
       id: prometheus-url
       run: |
-              EC2_IP=${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
-              PROMETHEUS_URL=$(ssh -i jenkins.pem -o StrictHostKeyChecking=no ubuntu@$EC2_IP '
-              kubectl get service monitoring-kube-prometheus-prometheus -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"
-              ')
-              echo "prometheus_url=http://$PROMETHEUS_URL:9090" >> $GITHUB_OUTPUT
+                  EC2_IP=${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
+                  PROMETHEUS_URL=$(ssh -i jenkins.pem -o StrictHostKeyChecking=no ubuntu@$EC2_IP '
+                  PROMETHEUS_SERVICE=$(kubectl get services -n prometheus -l "app.kubernetes.io/name=prometheus,app.kubernetes.io/instance=monitoring" -o jsonpath="{.items[0].metadata.name}")
+                  if [ -z "$PROMETHEUS_SERVICE" ]; then
+                    echo "Prometheus service not found. Listing all services in prometheus namespace:"
+                    kubectl get services -n prometheus
+                    exit 1
+                  fi
+                  kubectl get service $PROMETHEUS_SERVICE -n prometheus -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"
+                  ')
+                  if [ -z "$PROMETHEUS_URL" ]; then
+                    echo "Failed to get Prometheus URL"
+                    exit 1
+                  fi
+                  echo "prometheus_url=http://$PROMETHEUS_URL:9090" >> $GITHUB_OUTPUT
       
     - name: Get Grafana URL
       id: grafana-url
       run: |
-              EC2_IP=${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
-              GRAFANA_URL=$(ssh -i jenkins.pem -o StrictHostKeyChecking=no ubuntu@$EC2_IP '
-              kubectl get service monitoring-grafana -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"
-              ')
-              echo "grafana_url=http://$GRAFANA_URL" >> $GITHUB_OUTPUT
+                    EC2_IP=${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
+                    GRAFANA_URL=$(ssh -i jenkins.pem -o StrictHostKeyChecking=no ubuntu@$EC2_IP '
+                    GRAFANA_SERVICE=$(kubectl get services -n prometheus -l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=monitoring" -o jsonpath="{.items[0].metadata.name}")
+                    if [ -z "$GRAFANA_SERVICE" ]; then
+                      echo "Grafana service not found. Listing all services in prometheus namespace:"
+                      kubectl get services -n prometheus
+                      exit 1
+                    fi
+                    kubectl get service $GRAFANA_SERVICE -n prometheus -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"
+                    ')
+                    if [ -z "$GRAFANA_URL" ]; then
+                      echo "Failed to get Grafana URL"
+                      exit 1
+                    fi
+                    echo "grafana_url=http://$GRAFANA_URL" >> $GITHUB_OUTPUT
 
   Create_Connection_Info:
     needs: [Deploy_CloudFormation, Deploy_Nginx, Deploy_EFK, Conexion_EC2, Deploy_Monitoring]
