@@ -327,7 +327,7 @@ jobs:
           
     - name: Get Grafana URL
       id: grafana-url
-      run: |
+      run: |        
             EC2_IP=${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
             GRAFANA_URL=$(ssh -i jenkins.pem -o StrictHostKeyChecking=no ubuntu@$EC2_IP '
             GRAFANA_SERVICE=$(kubectl get services -n prometheus -l "app.kubernetes.io/name=grafana" -o jsonpath="{.items[0].metadata.name}")
@@ -335,15 +335,20 @@ jobs:
               echo "Grafana service not found."
               exit 1
             fi
-            echo "Found Grafana service: $GRAFANA_SERVICE"
+        
+            # Obtener la URL del servicio de Grafana
             kubectl get service $GRAFANA_SERVICE -n prometheus -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"
             ')
+        
+            # Verificar si se obtuvo la URL correctamente
             if [ -z "$GRAFANA_URL" ]; then
               echo "Failed to get Grafana URL"
               exit 1
             fi
+        
+            # Guardar la URL de Grafana en el output
             echo "grafana_url=http://${GRAFANA_URL}" >> $GITHUB_OUTPUT
-            echo "Grafana URL: http://${GRAFANA_URL}"
+            echo "Grafana URL: http://${GRAFANA_URL}
 
   Create_Connection_Info:
     needs: [Deploy_CloudFormation, Deploy_Nginx, Deploy_EFK, Conexion_EC2, Deploy_Monitoring]
@@ -355,8 +360,7 @@ jobs:
           EC2 Public IP: ${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
           Nginx Service URL: ${{ needs.Deploy_Nginx.outputs.nginx_url }}
           Kibana URL: ${{ needs.Deploy_EFK.outputs.kibana_url }}
-          Grafana URL: ${{ needs.Conexion_EC2.outputs.grafana_url }}
-          Grafana admin password: ${{ needs.Conexion_EC2.outputs.grafana_password }}
+          Grafana URL: ${{ needs.Deploy_Monitoring.outputs.grafana_url }}
           To connect via SSH: ssh -i jenkins.pem ubuntu@${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
           EOF
 

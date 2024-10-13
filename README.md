@@ -166,7 +166,7 @@ Verificar que Elasticsearch esté recibiendo datos:
 ### Importación de dashboards predefinidos:
 
 1. En el menú lateral, ir a "Create" > "Import".
-2. Ingresar el ID '' para importar un dashboard de Kubernetes cluster monitoring.
+2. Ingresar el ID '3119' para importar un dashboard de Kubernetes cluster monitoring.
 3. Seleccionar Prometheus como la fuente de datos y haga clic en "Import".
 
 ### Creación de un dashboard personalizado para el pod de Nginx:
