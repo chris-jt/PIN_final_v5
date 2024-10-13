@@ -320,11 +320,6 @@ jobs:
               kubectl exec -n prometheus $GRAFANA_POD -- curl -X POST -H "Content-Type: application/json" -d "{\"name\":\"Prometheus\",\"type\":\"prometheus\",\"url\":\"http://$PROMETHEUS_SVC:9090\",\"access\":\"proxy\",\"isDefault\":true}" http://admin:${{ secrets.GRAFANA_ADMIN_PASSWORD }}@localhost:3000/api/datasources
               '
 
-    - name: Install jq
-      run: |
-          EC2_IP=${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
-          ssh -i jenkins.pem -o StrictHostKeyChecking=no ubuntu@$EC2_IP 'sudo apt-get update && sudo apt-get install -y jq'
-          
     - name: Get Grafana URL
       id: grafana-url
       run: |        
@@ -361,6 +356,7 @@ jobs:
           Nginx Service URL: ${{ needs.Deploy_Nginx.outputs.nginx_url }}
           Kibana URL: ${{ needs.Deploy_EFK.outputs.kibana_url }}
           Grafana URL: ${{ needs.Deploy_Monitoring.outputs.grafana_url }}
+
           To connect via SSH: ssh -i jenkins.pem ubuntu@${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
           EOF
 
