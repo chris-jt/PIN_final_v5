@@ -294,8 +294,30 @@ jobs:
                 --set grafana.service.type=LoadBalancer \
                 --set alertmanager.persistentVolume.storageClass="gp2",server.persistentVolume.storageClass="gp2" 
               
-              kubectl get pods -n prometheus
-      
+                # Wait for pods to be ready
+                timeout=300  # 5 minutes timeout
+                start_time=$(date +%s)
+
+                echo "Waiting for pods to be ready..."
+                while true; do
+                  if kubectl get pods -n prometheus -l "release=monitoring" | grep -q ContainerCreating; then
+                    echo "Some pods are still being created. Waiting..."
+                    sleep 10
+                  else
+                    echo "All pods are in Running state."
+                    break
+                  fi
+
+                  current_time=$(date +%s)
+                  if (( current_time - start_time > timeout )); then
+                    echo "Timeout reached. Some pods may not be ready."
+                    exit 1
+                  fi
+                done
+
+                echo "Checking final status of pods:"
+                kubectl get pods -n prometheus
+
               # Wait for deployments to be ready
               kubectl wait --for=condition=available --timeout=300s deployment/monitoring-grafana
               kubectl wait --for=condition=available --timeout=300s deployment/monitoring-kube-prometheus-operator
