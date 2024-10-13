@@ -31,7 +31,7 @@ Este proyecto implementa un pipeline de CI/CD para desplegar una instancia EC2 e
 4. Se crea un cluster EKS en AWS.
 5. Se despliega un pod de Nginx con una página personalizada.
 6. Se despliega el stack EFK (Elasticsearch, Fluentd, Kibana) para monitoreo de logs.
-7. Se despliega Loki y Grafana para métricas y visualización.
+7. Se despliega Prometheus y Grafana para métricas y visualización.
 
 ## Acceso a la Instancia EC2
 
