@@ -7,7 +7,6 @@ echo "Cluster Name: $CLUSTER_NAME"
 echo "AWS Region: $AWS_REGION"
 echo "Node Type: $NODE_TYPE"
 echo "Node Count: $NODE_COUNT"
-echo "Grafana Password: $GRAFANA_ADMIN_PASSWORD"
 
 # Función para esperar a que apt esté disponible
 wait_for_apt() {
@@ -120,10 +119,6 @@ if ! curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 
     handle_error "Failed to install Helm"
 fi
 helm version
-
-# Instalar el CSI driver para EBS
-# log "Instalando el CSI driver para EBS..."
-# kubectl apply -k "github.com/kubernetes-sigs/aws-ebs-csi-driver/deploy/kubernetes/overlays/stable/?ref=master"
 
 # Asegurarse de que las configuraciones estén disponibles para el usuario ubuntu
 mkdir -p /home/ubuntu/.kube
