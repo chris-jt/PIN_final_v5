@@ -2,6 +2,15 @@ name: Deploy Infra y Nginx
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Rama a ejecutar'
+        required: true
+        default: 'main'
+        type: choice
+        options:
+        - main
+        - branch-1
 
 env:
   AWS_REGION: us-east-1
@@ -9,11 +18,16 @@ env:
   NODE_TYPE: t3.medium
   NODE_COUNT: 3
   AMI_ID: ami-0261755bbcb8c4a84  # AMI ID for Ubuntu 20.04 LTS in us-east-1
-  GRAFANA_ADMIN_PASSWORD: adminPIN
-jobs:
+  
+jobs: 
   Credenciales:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        ref: \${{ github.event.inputs.branch }}
+
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -23,7 +37,7 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
-
+        
     - name: Generate SSH key
       run: |
         ssh-keygen -t rsa -b 4096 -f jenkins.pem -N ""
@@ -48,7 +62,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ec2_ip: ${{ steps.ec2-ip.outputs.ec2_ip }}
-    steps:      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        ref: \${{ github.event.inputs.branch }}   
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v2
       with:
@@ -118,7 +137,12 @@ jobs:
     outputs:
       cluster_name: ${{ steps.cluster_info.outputs.cluster_name }}
 
-    steps:  
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: \${{ github.event.inputs.branch }}  
+
       - name: Checkout code
         uses: actions/checkout@v3
        
@@ -150,6 +174,11 @@ jobs:
       outputs:
         nginx_url: ${{ steps.nginx-url.outputs.nginx_url }}
       steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: \${{ github.event.inputs.branch }}
+    
       - name: Checkout code
         uses: actions/checkout@v3
         
@@ -211,6 +240,11 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+      with:
+        ref: \${{ github.event.inputs.branch }}
+
+    - name: Checkout code
+      uses: actions/checkout@v3
 
     - name: Download SSH key
       uses: actions/download-artifact@v3
@@ -241,6 +275,11 @@ jobs:
     outputs:
       grafana_url: ${{ steps.grafana-url.outputs.grafana_url }}
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        ref: \${{ github.event.inputs.branch }}
+
     - name: Checkout code
       uses: actions/checkout@v3
     
@@ -278,7 +317,8 @@ jobs:
     - name: Deploy Prometheus and Grafana
       run: |
               EC2_IP=${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
-              ssh -i jenkins.pem -o StrictHostKeyChecking=no ubuntu@$EC2_IP '
+              ssh -i jenkins.pem -o StrictHostKeyChecking=no ubuntu@$EC2_IP << EOF
+              GRAFANA_ADMIN_PASSWORD='${{ secrets.GRAFANA_ADMIN_PASSWORD }}'
               # Add Helm repo
               kubectl create namespace prometheus
               helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -287,7 +327,7 @@ jobs:
               # Install Prometheus and Grafana
               helm install monitoring prometheus-community/kube-prometheus-stack \
                 --namespace prometheus \
-                --set grafana.adminPassword=adminPIN \
+                --set grafana.adminPassword="\$GRAFANA_ADMIN_PASSWORD" \
                 --set prometheus.service.type=LoadBalancer \
                 --set grafana.service.type=LoadBalancer \
                 --set alertmanager.persistentVolume.storageClass="gp2" \
@@ -318,7 +358,7 @@ jobs:
               sleep 60
 
               kubectl exec -n prometheus $GRAFANA_POD -- curl -X POST -H "Content-Type: application/json" -d "{\"name\":\"Prometheus\",\"type\":\"prometheus\",\"url\":\"http://$PROMETHEUS_SVC:9090\",\"access\":\"proxy\",\"isDefault\":true}" http://admin:${{ secrets.GRAFANA_ADMIN_PASSWORD }}@localhost:3000/api/datasources
-              '
+              EOF
 
     - name: Get Grafana URL
       id: grafana-url      
@@ -334,7 +374,7 @@ jobs:
             # Obtener la URL del servicio de Grafana           
             kubectl get service $GRAFANA_SERVICE -n prometheus -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"                                
             ')
-            
+
             # Verificar si se obtuvo la URL correctamente            
               if [ -z "$GRAFANA_URL" ]; then           
                 echo "Failed to get Grafana URL"            
@@ -349,6 +389,11 @@ jobs:
     needs: [Deploy_CloudFormation, Deploy_Nginx, Deploy_EFK, Conexion_EC2, Deploy_Monitoring]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: \${{ github.event.inputs.branch }}
+
       - name: Create connection info
         run: |
           cat <<EOF > connection_info.txt
@@ -370,6 +415,11 @@ jobs:
     needs: [Create_Connection_Info]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: \${{ github.event.inputs.branch }}
+
       - name: Download connection info
         uses: actions/download-artifact@v3
         with:
@@ -386,6 +436,11 @@ jobs:
     needs: [Deploy_CloudFormation, Conexion_EC2]
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        ref: \${{ github.event.inputs.branch }}
+
     - name: Download SSH key
       uses: actions/download-artifact@v3
       with:
