@@ -278,17 +278,16 @@ jobs:
     - name: Deploy Prometheus and Grafana
       run: |
               EC2_IP=${{ needs.Deploy_CloudFormation.outputs.ec2_ip }}
-              ssh -i jenkins.pem -o StrictHostKeyChecking=no ubuntu@$EC2_IP << EOF
-              GRAFANA_ADMIN_PASSWORD='${{ secrets.GRAFANA_ADMIN_PASSWORD }}'
+              ssh -i jenkins.pem -o StrictHostKeyChecking=no ubuntu@$EC2_IP '
               # Add Helm repo
-              kubectl create namespace prometheus --dry-run=client -o yaml | kubectl apply -f -
+              kubectl create namespace prometheus
               helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
               helm repo update
       
-              # Install or upgrade Prometheus and Grafana
-              helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+              # Install Prometheus and Grafana
+              helm install monitoring prometheus-community/kube-prometheus-stack \
                 --namespace prometheus \
-                --set grafana.adminPassword="\$GRAFANA_ADMIN_PASSWORD" \
+                --set grafana.adminPassword=adminPIN \
                 --set prometheus.service.type=LoadBalancer \
                 --set grafana.service.type=LoadBalancer \
                 --set alertmanager.persistentVolume.storageClass="gp2" \
@@ -306,8 +305,7 @@ jobs:
                 
               # Wait for pods to be ready
               echo "Waiting for pods to be ready..."
-              kubectl rollout status deployment/monitoring-grafana -n prometheus
-              kubectl rollout status statefulset/prometheus-monitoring-kube-prometheus-prometheus -n prometheus
+              kubectl wait --for=condition=ready pod --all -n prometheus --timeout=300s
 
               echo "Checking final status of pods:"
               kubectl get pods -n prometheus
@@ -319,8 +317,8 @@ jobs:
               # Esperar un poco más para asegurarse de que Grafana esté completamente inicializado
               sleep 60
 
-              kubectl exec -n prometheus $GRAFANA_POD -- curl -X POST -H "Content-Type: application/json" -d "{\\"name\\":\\"Prometheus\\",\\"type\\":\\"prometheus\\",\\"url\\":\\"http://$PROMETHEUS_SVC:9090\\",\\"access\\":\\"proxy\\",\\"isDefault\\":true}" http://admin:\${{ secrets.GRAFANA_ADMIN_PASSWORD }}@localhost:3000/api/datasources
-              EOF
+              kubectl exec -n prometheus $GRAFANA_POD -- curl -X POST -H "Content-Type: application/json" -d "{\"name\":\"Prometheus\",\"type\":\"prometheus\",\"url\":\"http://$PROMETHEUS_SVC:9090\",\"access\":\"proxy\",\"isDefault\":true}" http://admin:${{ secrets.GRAFANA_ADMIN_PASSWORD }}@localhost:3000/api/datasources
+              '
 
     - name: Get Grafana URL
       id: grafana-url      
